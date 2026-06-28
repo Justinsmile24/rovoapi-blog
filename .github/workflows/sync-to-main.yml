@@ -1,0 +1,113 @@
+name: Sync articles to rovoapi-3.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.md"
+      - "llms.txt"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout rovoapi-blog (public)
+        uses: actions/checkout@v4
+        with:
+          path: blog
+
+      - name: Checkout rovoapi-3.0 (private)
+        uses: actions/checkout@v4
+        with:
+          repository: Justinsmile24/rovoapi-3.0
+          token: ${{ secrets.SYNC_PAT }}
+          path: main
+
+      - name: Convert and sync articles
+        shell: bash
+        run: |
+          set -e
+
+          # ─── 文章映射表 ──────────────────────────────────────────────
+          # 每行: source .md → slug  .mdx,  title,  description,  tags
+          ARTICLES=(
+            "claude-api-rate-limit-solution.md|claude-api-rate-limit-solution|Claude API Rate Limit 终极解决方案（2025年完整指南）|Error 429: Too Many Requests 解决方案|claude, rate-limit, tutorial"
+            "claude-api-too-expensive-alternatives.md|claude-api-too-expensive-alternatives|Claude Opus 太贵了？2025年最划算的平替方案对比|降低 Claude API 成本的 5 个实战方案|claude, pricing, tutorial"
+            "cursor-rate-limit-fix.md|cursor-rate-limit-fix|Cursor AI Rate Limit 已达上限？3 分钟彻底解决|Cursor 频繁限速？3 种方案彻底解决|cursor, rate-limit, tutorial"
+            "claude-api-china-access.md|claude-api-china-access|国内如何使用 Claude API？稳定访问完整指南|无需 VPN，国内直连 Claude API|claude, china, guide"
+            "openai-api-alternatives-2025.md|openai-api-alternatives-2025|2025年 OpenAI API 最佳替代方案完整对比|GPT-4o 替代方案完整指南|openai, comparison, guide"
+          )
+
+          # ─── 提取 excerpt（文章前 120 字） ──────────────────────────
+          extract_excerpt() {
+            local file="$1"
+            # 跳过 # 标题行和目标关键词行，取第一个非空段落
+            sed '1,/^$/d' "$file" \
+              | sed '/^$/d' \
+              | head -1 \
+              | sed 's/^#\+\s*//' \
+              | head -c 120
+          }
+
+          for entry in "${ARTICLES[@]}"; do
+            IFS='|' read -r src slug title desc tags <<< "$entry"
+            src_file="blog/$src"
+            target="main/content/blog/$slug.mdx"
+
+            if [ ! -f "$src_file" ]; then
+              echo "⚠️  $src_file not found, skipping"
+              continue
+            fi
+
+            # 读取正文（跳过原始 # 标题行和目标关键词行）
+            content=$(awk '
+              BEGIN { skip_header = 1 }
+              /^---/ && skip_header == 1 { skip_header = 0; next }
+              skip_header == 1 { next }
+              { print }
+            ' "$src_file")
+
+            excerpt=$(extract_excerpt "$src_file")
+
+            # 组装 frontmatter + 正文
+            cat > /tmp/article.md <<MDEOF
+---
+title: "$title"
+description: "$desc"
+date: "$(date +%Y-%m-%d)"
+author: "RovoAPI Team"
+tags: [$(echo "$tags" | sed 's/, */, "/g; s/^/"/; s/$/"/')]
+excerpt: "$excerpt"
+---
+
+$content
+MDEOF
+
+            mkdir -p "$(dirname "$target")"
+            cp /tmp/article.md "$target"
+            echo "✅ Synced: $src → content/blog/$slug.mdx"
+          done
+
+          # ─── llms.txt ────────────────────────────────────────────────
+          if [ -f "blog/llms.txt" ]; then
+            mkdir -p main/public
+            cp blog/llms.txt main/public/llms.txt
+            echo "✅ Synced: llms.txt → public/llms.txt"
+          fi
+
+      - name: Commit and push to rovoapi-3.0
+        shell: bash
+        working-directory: main
+        run: |
+          git config user.name "rovoapi-blog-bot"
+          git config user.email "bot@rovoapi.com"
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to sync"
+            exit 0
+          fi
+
+          git add .
+          git commit -m "chore: sync blog articles from rovoapi-blog"
+          git push

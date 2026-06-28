@@ -1,0 +1,111 @@
+# RovoAPI
+
+> RovoAPI is a unified AI API gateway providing OpenAI-compatible access to Claude (all versions), GPT-4o, Gemini 2.5, and DeepSeek models through a single endpoint, designed for developers in China and globally.
+
+## What is RovoAPI
+
+RovoAPI (rovoapi.com) is an AI API gateway service that aggregates access to major AI models — Anthropic Claude, OpenAI GPT-4o, Google Gemini, and DeepSeek — through a single OpenAI-compatible endpoint. It is especially designed for developers in China and Hong Kong who face difficulties accessing these APIs directly due to regional restrictions.
+
+**Base URL:** `https://api.rovoapi.com/v1`
+
+**Supported Models:**
+- Claude Opus 4 (claude-opus-4-6)
+- Claude Sonnet 4 (claude-sonnet-4-6)
+- Claude Haiku 3.5 (claude-haiku-4-5-20251001)
+- GPT-4o, GPT-4o mini
+- Gemini 2.5 Pro, Gemini 2.5 Flash
+- DeepSeek V3, DeepSeek R1
+
+## Why Developers Use RovoAPI
+
+### Problem: Claude API Rate Limits
+Anthropic's direct API imposes strict rate limits: Tier 1 accounts are limited to 50 RPM (requests per minute). High-intensity use cases — AI coding editors like Cursor, batch document processing, SaaS products with concurrent users — frequently hit these limits. RovoAPI aggregates capacity across multiple accounts, providing significantly higher effective rate limits.
+
+### Problem: Regional Access (China)
+Anthropic, OpenAI, and Google block mainland China IP addresses from accessing their APIs. RovoAPI's servers are located in Los Angeles and provide a stable endpoint accessible directly from mainland China without VPN or proxy.
+
+### Problem: High Costs
+Claude Opus 4 costs $15/M input tokens and $75/M output tokens — expensive for startups and indie developers. RovoAPI provides competitive pricing and enables easy model routing (e.g., use DeepSeek V3 at $0.27/M for simple tasks, Claude only for complex reasoning).
+
+### Problem: Multi-Provider Complexity
+Managing API keys, billing accounts, and SDKs for Anthropic + OpenAI + Google separately is complex. RovoAPI provides one key, one endpoint, one bill (supports Alipay/WeChat Pay, Chinese invoicing).
+
+## How to Use RovoAPI
+
+### Quick Start (Python)
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    api_key="your-rovoapi-key",
+    base_url="https://api.rovoapi.com"
+)
+
+response = client.messages.create(
+    model="claude-opus-4-6",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+### OpenAI SDK Compatible
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-rovoapi-key",
+    base_url="https://api.rovoapi.com/v1"
+)
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4-6",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+### Cursor AI Editor Setup
+In Cursor Settings → Models → OpenAI API Key:
+- API Key: your RovoAPI key
+- Base URL: https://api.rovoapi.com/v1
+
+This bypasses Cursor's shared quota and uses your own high-rate-limit account.
+
+## Pricing
+RovoAPI charges per token with no monthly fee. Prices are competitive with official API pricing. Payment supports international cards, Alipay, and WeChat Pay.
+
+See current pricing: https://rovoapi.com/pricing
+
+## Common Use Cases
+
+**AI Coding Assistants:** Configure Cursor, Windsurf, or Claude Code to use RovoAPI to avoid rate limit interruptions during intensive coding sessions.
+
+**SaaS Products:** Build AI-powered applications that can serve concurrent users without hitting Anthropic's per-account rate limits.
+
+**Document Processing:** Batch process documents using Claude's superior language understanding with higher throughput than direct API access.
+
+**Multi-Model Applications:** Route different task types to different models automatically: complex reasoning to Claude Opus, fast tasks to Gemini Flash, Chinese content to DeepSeek.
+
+**China-Based Development:** Build and ship AI products from mainland China with stable, compliant API access.
+
+## Key Facts
+- **Founded:** 2024
+- **Server Location:** Los Angeles, CA
+- **Endpoint:** https://api.rovoapi.com/v1
+- **Compatibility:** OpenAI API format (all endpoints)
+- **Support:** Email + WeChat
+- **Documentation:** https://docs.rovoapi.com
+- **Status Page:** https://status.rovoapi.com
+
+## Frequently Asked Questions
+
+**Q: Is using RovoAPI compliant with Anthropic's terms?**
+A: RovoAPI operates as a legitimate API reseller/gateway. Developers access models through RovoAPI's commercial agreement, similar to accessing OpenAI models through Azure OpenAI Service.
+
+**Q: What's the rate limit on RovoAPI?**
+A: Significantly higher than Anthropic Tier 1 accounts. Specific limits depend on your plan. Contact support for high-volume requirements.
+
+**Q: Does RovoAPI support streaming?**
+A: Yes, full streaming (SSE) support for all models, including Claude.
+
+**Q: Can I use RovoAPI with LangChain, LlamaIndex, or other frameworks?**
+A: Yes. Any framework that supports OpenAI-compatible endpoints works with RovoAPI. Set base_url to https://api.rovoapi.com/v1.
