@@ -1,0 +1,162 @@
+---
+title: "快速开始"
+description: "2 分钟内完成第一次真实 API 调用"
+---
+
+# 快速开始
+
+这页只做一件事:让你用真实的 API Key 跑通一次真实的请求,亲眼看到它能用。不讲原理,原理在[工作原理](/docs/how-it-works)那页。
+
+---
+
+## 在开始之前,问自己一个问题
+
+你现在用的是官方 API 直连,还是第一次接入 AI API?
+
+- **如果你已经在用 Anthropic / OpenAI 官方 SDK**,接入 RovoAPI 只是改两个参数(`api_key` 和 `base_url`),代码逻辑完全不变,跳到 [第 3 步](#3-接入你的代码-30-秒) 就够了。
+- **如果你是第一次接入 AI API**,跟着下面完整走一遍,5 分钟搞定。
+
+---
+
+## 第 1 步:拿到 API Key(1 分钟)
+
+去 [rovoapi.com/register](https://rovoapi.com/register) 注册,不需要信用卡。
+
+注册完成后,控制台会立刻生成一个 Key,长这样:
+
+```
+sk-rovo-abc123...f456
+```
+
+**现在就复制它** — 下面每一步都要用。
+
+---
+
+## 第 2 步:充值(1 分钟,可跳过测试)
+
+最低充值 ¥10,支持信用卡和支付宝。余额不过期,用多少扣多少。
+
+> 如果你只是想先测试一下能不能跑通,可以先跳过这步直接试 — 没有余额时调用会返回 `402` 错误,但你能确认 Key 本身是否有效。
+
+---
+
+## 第 3 步:接入你的代码(30 秒)
+
+选你正在用的方式:
+
+### 已有 Anthropic SDK 代码 → 改两行
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    api_key="sk-rovo-你的key",          # 原来是 ANTHROPIC_API_KEY
+    base_url="https://api.rovoapi.com"  # 加上这一行,其他都不用变
+)
+
+msg = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "你好"}],
+)
+print(msg.content[0].text)
+```
+
+### 已有 OpenAI SDK 代码 → 改两行
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-rovo-你的key",
+    base_url="https://api.rovoapi.com/v1"
+)
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4-6",  # 也可以填 gpt-5.4、deepseek-v4-flash 等
+    messages=[{"role": "user", "content": "你好"}]
+)
+print(response.choices[0].message.content)
+```
+
+### Claude Code CLI 用户
+
+编辑 `~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-rovo-你的key",
+    "ANTHROPIC_BASE_URL": "https://api.rovoapi.com"
+  }
+}
+```
+
+保存后直接运行 `claude`,不需要改任何代码。
+
+### 还没有任何代码,先用终端测一下
+
+```bash
+curl https://api.rovoapi.com/v1/chat/completions \
+  -H "Authorization: Bearer sk-rovo-你的key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-v4-flash",
+    "messages": [{"role": "user", "content": "用5个词打个招呼"}]
+  }'
+```
+
+> 这里用 `deepseek-v4-flash` 是因为它最便宜($0.14/M 输入),测试阶段几乎不花钱。确认能跑通之后,再换成你实际要用的模型。
+
+---
+
+## 第 4 步:确认它真的成功了
+
+跑完上面任意一种方式,你应该看到类似这样的返回:
+
+**Anthropic SDK:**
+```
+你好！有什么可以帮助你的吗？
+```
+
+**OpenAI SDK / cURL:**
+```json
+{
+  "choices": [{"message": {"content": "你好！有什么可以帮助你的吗？"}}]
+}
+```
+
+看到内容,说明从你的代码 → RovoAPI → 上游模型 → 返回给你,这条链路完整跑通了。
+
+### 如果没看到,按这个表查
+
+| 报错 | 真实原因 | 怎么修 |
+|------|----------|--------|
+| `401 Unauthorized` | Key 写错了,或者忘了复制完整 | 回控制台重新复制一遍 Key,注意不要带多余空格 |
+| `402 Payment Required` | 余额不足 ¥10 | 回到[充值页](https://rovoapi.com/dashboard)充值 |
+| `429 Too Many Requests` | 短时间内请求太密集 | 等几秒重试,如果持续出现,去控制台查看你当前的限速档位 |
+| 请求一直卡住没返回 | 通常是网络问题,不是 RovoAPI 问题 | 检查本地网络,或换一个网络环境重试 |
+| 返回内容和预期模型不符 | `model` 字段拼写错了,实际路由到了别的模型 | 对照[模型列表](/models)检查模型名拼写 |
+
+---
+
+## 跑通之后,你大概率会问的 3 个问题
+
+**"为什么我改了 base_url,代码其他地方完全不用动?"**
+→ 看 [工作原理](/docs/how-it-works),我们不修改请求/响应格式,只做转发。
+
+**"我应该选哪个模型?"**
+→ 复杂推理 / 写代码用 `claude-sonnet-4-6`;简单任务 / 高频调用用 `deepseek-v4-flash`(最便宜);两者怎么取舍看 [模型对比](/models)。
+
+**"生产环境部署前我还需要做什么?"**
+→ 看 [API 参考](/docs/api-reference) 里的"最佳实践"部分,主要是流式响应、错误重试、用量监控这三件事。
+
+---
+
+## 下一步
+
+- **[工作原理](/docs/how-it-works)** — 在接入生产环境之前,搞清楚数据流向和故障处理逻辑
+- **[模型列表](/models)** — 12+ 个模型的价格和适用场景对比
+- **[API 参考](/docs/api-reference)** — 完整端点、流式输出、错误码
+
+**卡住了?** 发邮件到支持邮箱,我们几小时内回复。
